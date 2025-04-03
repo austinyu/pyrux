@@ -1,0 +1,12 @@
+
+exclude = []
+line-length = 95
+indent-width = 4
+
+[lint]
+ignore = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+

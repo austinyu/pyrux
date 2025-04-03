@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "pylint.interpreter": [
+      "${workspaceFolder}/.venv/Scripts/python.exe"
+    ],
+    "editor.rulers": [
+      95
+    ],
+    "mypy-type-checker.importStrategy": "fromEnvironment",
+    "mypy-type-checker.interpreter": [
+      "${workspaceFolder}/.venv/Scripts/python.exe"
+    ]
+  }
+}

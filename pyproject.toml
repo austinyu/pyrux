@@ -1,0 +1,48 @@
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyrux"
+version = "0.0.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = []
+keywords = []
+classifiers = []
+dependencies = []
+dynamic = []
+[[project.authors]]
+name = "Austin Yu"
+email = "austinyu@stanford.edu"
+
+[[project.maintainers]]
+name = "Austin Yu"
+email = "austinyu@stanford.edu"
+
+[dependency-groups]
+tests = [ "pytest",]
+static_checkers = [ "flake8", "mypy", "pyright", "pylint",]
+formatters = [ "ruff", "isort",]
+docs = [ "mkdocs",]
+
+[project.urls]
+homepage = "https://todo.com"
+source = "https://todo.com"
+download = "https://todo.com"
+changelog = "https://todo.com"
+releasenotes = "https://todo.com"
+documentation = "https://todo.com"
+issues = "https://todo.com"
+funding = "https://todo.com"
+
+[project.optional-dependencies]
+
+[tool.hatch.build.targets.sdist]
+include = [ "README.md", "LICENSE", "CHANGELOG.md",]
+exclude = []
+
+[tool.hatch.build.targets.wheel]
+packages = [ "src/pyrux",]
