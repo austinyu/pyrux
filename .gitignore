@@ -28,7 +28,6 @@ site/*
 .benchmarks/*
 .codspeed/*
 
-demo/*
 .venv/
 
 _version.py

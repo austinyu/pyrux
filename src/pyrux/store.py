@@ -21,8 +21,8 @@ STORE: dict[str, Slice] | None = None
 
 Ts = TypeVarTuple("Ts")
 Ts_INTERNAL = TypeVarTuple("Ts_INTERNAL")
-T_Slice = TypeVar("T_Slice", bound=Slice)
-T_State = TypeVar("T_State")
+AnySlice = TypeVar("AnySlice", bound=Slice)
+AnyState = TypeVar("AnyState")
 
 SubscriptionEntry = tuple[Callable[[tuple], None], list[StatePath]]
 SUBSCRIPTIONS: dict[str, dict[str, list[SubscriptionEntry]]] = {}
@@ -89,25 +89,25 @@ if TYPE_CHECKING:
     # For callables that take only one argument (no payload)
     @overload
     def dispatch(
-        action_creator: Callable[[T_Slice], T_Slice],
+        reducer: Callable[[AnySlice], AnySlice],
         payload: None = None,
     ) -> None: ...
 
     # For callables that take two arguments (with payload)
     @overload
     def dispatch(
-        action_creator: Callable[[T_Slice, T_State], T_Slice],
-        payload: T_State,
+        reducer: Callable[[AnySlice, AnyState], AnySlice],
+        payload: AnyState,
     ) -> None: ...
 
     def dispatch(
-        action_creator: Any,
+        reducer: Any,
         payload: Any = None,
     ) -> None:
         """"Dispatch an action to the store."""
 
 else:
-    Reducer = Callable[[Slice], Slice] | Callable[[Slice, T_State], Slice]
+    Reducer = Callable[[Slice], Slice] | Callable[[Slice, AnyState], Slice]
 
     def dispatch(reducer: Reducer, payload: Any | None = None) -> None:
         assert STORE is not None, "Store not initialized"
@@ -144,8 +144,8 @@ if TYPE_CHECKING:
 
     @overload
     def subscribe(
-        args: T_State,
-    ) -> Callable[[Callable[[T_State], None]], Callable[[], None]]: ...
+        args: AnyState,
+    ) -> Callable[[Callable[[AnyState], None]], Callable[[], None]]: ...
 
     def subscribe(args: Any) -> Any:
         """Subscribe to state changes."""
@@ -186,7 +186,7 @@ else:
 
 def register_extra_reducer(
     state: StatePath,
-    callback: Callable[[T_Slice], T_Slice],
+    callback: Callable[[AnySlice], AnySlice],
 ) -> None:
     slice_name = state.slice_name
     state_name = state.state
@@ -199,7 +199,7 @@ def register_extra_reducer(
 
 def register_extra_reducer_with_state(
     state: StatePath,
-    callback: Callable[[T_Slice, Any], T_Slice],
+    callback: Callable[[AnySlice, Any], AnySlice],
 ) -> None:
     slice_name = state.slice_name
     state_name = state.state

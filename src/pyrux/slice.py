@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, NamedTuple, dataclass_transform, Self
+from typing import TYPE_CHECKING, Any, NamedTuple, dataclass_transform, Self, TypeVar
 from pydantic import BaseModel, ConfigDict
 
+T_State = TypeVar("T_State")
 
 class StatePath(NamedTuple):
     """Internal representation of a state path."""
@@ -35,12 +36,17 @@ class Slice(BaseModel):
             raise KeyError(f"State '{key}' not found in slice '{self.__class__.__name__}'")
         return self.__getattribute__(key)
 
-    def update(self, update_states: dict[StatePath | Any, Any]) -> Self:
-        """Update the slice state with new values by creating a new instance."""
-        return self.model_copy(update={
-            update_path.state: new_state
-            for update_path, new_state in update_states.items()
-        })
+    if TYPE_CHECKING:
+        def update(self, update_states: dict[T_State, T_State]) -> Self:
+            """Update the slice state with new values by creating a new instance."""
+            ...
+
+    else:
+        def update(self, update_states: dict[StatePath, Any]) -> Self:
+            return self.model_copy(update={
+                update_path.state: new_state
+                for update_path, new_state in update_states.items()
+            })
 
     if TYPE_CHECKING:
 
