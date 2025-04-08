@@ -7,12 +7,14 @@ name = "pyrux"
 version = "0.0.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 license-files = []
 keywords = []
 classifiers = []
-dependencies = []
+dependencies = [
+    "pydantic>=2.11.2",
+]
 dynamic = []
 [[project.authors]]
 name = "Austin Yu"
