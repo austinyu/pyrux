@@ -15,6 +15,7 @@
     "mypy-type-checker.importStrategy": "fromEnvironment",
     "mypy-type-checker.interpreter": [
       "${workspaceFolder}/.venv/Scripts/python.exe"
-    ]
+    ],
+    "pylint.importStrategy": "fromEnvironment"
   }
 }
