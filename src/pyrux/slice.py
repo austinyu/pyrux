@@ -51,11 +51,11 @@ class Slice(BaseModel):
     if TYPE_CHECKING:
 
         @property
-        def name(self) -> str: ...
+        def slice_name(self) -> str: ...
 
     if not TYPE_CHECKING:
 
         def __getattribute__(self, attr_name: str) -> Any:
-            if attr_name == "name":
+            if attr_name == "slice_name":
                 return self.__class__.__name__
             return super().__getattribute__(attr_name)
