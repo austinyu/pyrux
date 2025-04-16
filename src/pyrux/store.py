@@ -27,6 +27,9 @@ AnyState = TypeVar("AnyState")
 SubscriptionEntry = tuple[Callable[..., None], list[StatePath]]
 SUBSCRIPTIONS: dict[str, dict[str, list[SubscriptionEntry]]] = {}
 
+class _StoreDataModel:
+    pass
+
 def _get_slice_name(reducer: Callable) -> str:
     return reducer.__qualname__.split(".")[0]
 
@@ -42,6 +45,9 @@ def create_store(slices: Sequence[Slice]) -> None:
     global STORE
     assert STORE is None, "Store already initialized"
     STORE = {slice.__class__.__name__: slice for slice in slices}
+    _StoreDataModel.__annotations__ = {
+        name: slice.__class__ for name, slice in STORE.items()
+    }
 
 
 def dump_store() -> dict[str, Any]:
@@ -72,6 +78,21 @@ def get_store() -> dict[str, Slice]:
     assert STORE is not None, "Store not initialized"
     return STORE
 
+def get_store_data_model() -> type[_StoreDataModel]:
+    """Get the store data model. The returned class is a class based data model.
+    Class based data model defines the attributes as name and its type hints. Examples include
+    `TypedDict`, `dataclass`, `pydantic.BaseModel`, etc. This function is useful for other
+    packages to serialize or deserialize the store data model.
+    Here is an example:
+    
+    ```python
+    class StoreDataModel:
+        CameraSlice: CameraSlice
+        Snapshot: Snapshot
+    ```
+    """
+    assert STORE is not None, "Store not initialized"
+    return _StoreDataModel
 
 if TYPE_CHECKING:
 
