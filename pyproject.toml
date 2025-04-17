@@ -45,7 +45,7 @@ funding = "https://todo.com"
 source = "vcs"
 
 [tool.hatch.build.targets.sdist]
-include = [ "README.md", "LICENSE", "CHANGELOG.md",]
+include = [ "src/pyrux/*", "README.md", "LICENSE", "CHANGELOG.md",]
 exclude = []
 
 [tool.hatch.build.targets.wheel]

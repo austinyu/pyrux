@@ -12,17 +12,21 @@ __all__ = [
     "get_store",
     "dispatch",
     "subscribe",
+    "force_notify",
+    "dispatch_state",
 ]
 
 from .store import (
     clear_store,
     create_store,
     dump_store,
+    force_notify,
     load_store,
     get_state,
     get_store,
     dispatch,
     subscribe,
+    dispatch_state,
 )
 from .utils import (
     reduce,

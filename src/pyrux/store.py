@@ -15,6 +15,8 @@ __all__ = [
     "get_state",
     "dispatch",
     "subscribe",
+    "force_notify",
+    "dispatch_state",
 ]
 
 STORE: dict[str, Slice] | None = None
@@ -22,16 +24,19 @@ STORE: dict[str, Slice] | None = None
 Ts = TypeVarTuple("Ts")
 Ts_INTERNAL = TypeVarTuple("Ts_INTERNAL")
 AnySlice = TypeVar("AnySlice", bound=Slice)
-AnyState = TypeVar("AnyState")
+AnyState = TypeVar("AnyState", invaria)
 
 SubscriptionEntry = tuple[Callable[..., None], list[StatePath]]
 SUBSCRIPTIONS: dict[str, dict[str, list[SubscriptionEntry]]] = {}
 
+
 class _StoreDataModel:
     pass
 
+
 def _get_slice_name(reducer: Callable) -> str:
     return reducer.__qualname__.split(".")[0]
+
 
 def clear_store() -> None:
     """Clear the store."""
@@ -45,9 +50,7 @@ def create_store(slices: Sequence[Slice]) -> None:
     global STORE
     assert STORE is None, "Store already initialized"
     STORE = {slice.__class__.__name__: slice for slice in slices}
-    _StoreDataModel.__annotations__ = {
-        name: slice.__class__ for name, slice in STORE.items()
-    }
+    _StoreDataModel.__annotations__ = {name: slice.__class__ for name, slice in STORE.items()}
 
 
 def dump_store() -> dict[str, Any]:
@@ -78,13 +81,14 @@ def get_store() -> dict[str, Slice]:
     assert STORE is not None, "Store not initialized"
     return STORE
 
+
 def get_store_data_model() -> type[_StoreDataModel]:
     """Get the store data model. The returned class is a class based data model.
     Class based data model defines the attributes as name and its type hints. Examples include
     `TypedDict`, `dataclass`, `pydantic.BaseModel`, etc. This function is useful for other
     packages to serialize or deserialize the store data model.
     Here is an example:
-    
+
     ```python
     class StoreDataModel:
         CameraSlice: CameraSlice
@@ -93,6 +97,7 @@ def get_store_data_model() -> type[_StoreDataModel]:
     """
     assert STORE is not None, "Store not initialized"
     return _StoreDataModel
+
 
 if TYPE_CHECKING:
 
@@ -118,14 +123,8 @@ Reducer = Callable[[Slice], Slice]
 ReducerWithPayload = Callable[[Slice, AnyState], Slice]
 
 
-def _dispatch(
-    slice_name: str, reducer: Reducer | ReducerWithPayload, payload: Any | None = None
-) -> None:
+def _dispatch(slice_name: str, new_slice: Slice) -> None:
     assert STORE is not None, "Store not initialized"
-    if payload is None:
-        new_slice = cast(Reducer, reducer)(STORE[slice_name])
-    else:
-        new_slice = cast(ReducerWithPayload, reducer)(STORE[slice_name], payload)
     slice_state_names = new_slice.model_fields_set
     for state_name in slice_state_names:
         new_state = new_slice.get_state(state_name)
@@ -166,13 +165,53 @@ if TYPE_CHECKING:
     ) -> None:
         """ "Dispatch an action to the store."""
 
+    def force_notify(states: Sequence[AnyState]) -> None:  # pylint: disable=W613
+        """Notify subscribers of state value even if the state did not change."""
+
+    # I could not find a way to enforce type consistency for 2 arguments in the function.
+    def dispatch_state(
+        state: AnyState, payload: AnyState
+    ) -> None:
+        """Convenient function to directly dispatch a state change."""
 
 else:
     Reducer = Callable[[Slice], Slice] | Callable[[Slice, AnyState], Slice]
 
     def dispatch(reducer: Reducer, payload: Any | None = None) -> None:
-        _dispatch(_get_slice_name(reducer), reducer, payload)
+        slice_name: str = _get_slice_name(reducer)
+        if payload is None:
+            new_slice = cast(Reducer, reducer)(STORE[slice_name])
+        else:
+            new_slice = cast(ReducerWithPayload, reducer)(STORE[slice_name], payload)
+        _dispatch(slice_name, new_slice)
 
+    def dispatch_state(
+        state: StatePath,
+        payload: AnyState,
+    ) -> None:
+        assert STORE is not None, "Store not initialized"
+        new_slice = STORE[state.slice_name].update([(state, payload)])
+        _dispatch(state.slice_name, new_slice)
+
+    def force_notify(states: Sequence[AnyState]) -> None:
+        assert STORE is not None, "Store not initialized"
+        for state in states:
+            slice_name = state.slice_name
+            state_name = state.state
+            if slice_name in STORE and state_name in STORE[slice_name].model_fields_set:
+                new_state = STORE[slice_name].get_state(state_name)
+                if (
+                    slice_name in SUBSCRIPTIONS  # has subscribers for this slice
+                    and state_name
+                    in SUBSCRIPTIONS[slice_name]  # has subscribers for this state
+                ):
+                    for callback, paths in SUBSCRIPTIONS[slice_name][state_name]:
+                        callback(
+                            *tuple(
+                                get_state(path) if path.state != state_name else new_state
+                                for path in paths
+                            )
+                        )
 
 AnyState1 = TypeVar("AnyState1")
 AnyState2 = TypeVar("AnyState2")

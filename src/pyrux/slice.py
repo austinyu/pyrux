@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, NamedTuple, dataclass_transform, Self, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, dataclass_transform, Self, TypeVar
 from pydantic import BaseModel, ConfigDict
 
 T_State = TypeVar("T_State")
@@ -37,15 +37,15 @@ class Slice(BaseModel):
         return self.__getattribute__(key)
 
     if TYPE_CHECKING:
-        def update(self, update_states: dict[T_State, T_State]) -> Self:
+        def update(self, update_states: Sequence[tuple[T_State, T_State]]) -> Self:
             """Update the slice state with new values by creating a new instance."""
             ...
 
     else:
-        def update(self, update_states: dict[StatePath, Any]) -> Self:
+        def update(self, update_states: Sequence[tuple[StatePath, Any]]) -> Self:
             return self.model_copy(update={
                 update_path.state: new_state
-                for update_path, new_state in update_states.items()
+                for update_path, new_state in update_states
             })
 
     if TYPE_CHECKING:

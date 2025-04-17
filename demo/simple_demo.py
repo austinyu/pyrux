@@ -35,29 +35,29 @@ class CameraSettings(pr.Slice):
 
     @pr.reduce
     def set_exposure(piece: CameraSettings, payload: float) -> CameraSettings:
-        return piece.update({CameraSettings.exposure_in_s: payload})
+        return piece.update([(CameraSettings.exposure_in_s, payload)])
 
     @pr.reduce
     def increment_gain(piece: CameraSettings) -> CameraSettings:
-        return piece.update({CameraSettings.gain: piece.gain + 1})
+        return piece.update([(CameraSettings.gain, piece.gain + 1)])
 
     @pr.reduce
     def decrement_gain(piece: CameraSettings) -> CameraSettings:
-        return piece.update({CameraSettings.gain: piece.gain - 1})
+        return piece.update([(CameraSettings.gain, piece.gain - 1)])
 
     @pr.reduce
     def change_binning(piece: CameraSettings, payload: tuple[int, int]) -> CameraSettings:
-        return piece.update({CameraSettings.binning: payload})
+        return piece.update([(CameraSettings.binning, payload)])
 
     @pr.reduce
     def change_roi(
         piece: CameraSettings, payload: tuple[int, int, int, int]
     ) -> CameraSettings:
-        return piece.update({CameraSettings.roi: payload})
+        return piece.update([(CameraSettings.roi, payload)])
 
     @pr.reduce
     def set_bit_depth(piece: CameraSettings, payload: Literal[8, 16]) -> CameraSettings:
-        return piece.update({CameraSettings.bit_depth: payload})
+        return piece.update([(CameraSettings.bit_depth, payload)])
 
 
 Grey8bit = Annotated[int, Ge(0), Le(255)]
@@ -84,30 +84,30 @@ class MonoImgSettings(pr.Slice):
 
     @pr.reduce
     def flip_horizontal(piece: MonoImgSettings) -> MonoImgSettings:
-        return piece.update({MonoImgSettings.left_right_flip: not piece.left_right_flip})
+        return piece.update([(MonoImgSettings.left_right_flip, not piece.left_right_flip)])
 
     @pr.reduce
     def set_black_level(piece: MonoImgSettings, payload: float) -> MonoImgSettings:
         if payload <= piece.white_level:
-            return piece.update({MonoImgSettings.black_level: payload})
+            return piece.update([(MonoImgSettings.black_level, payload)])
         else:
             return piece.update(
-                {
-                    MonoImgSettings.black_level: piece.white_level,
-                    MonoImgSettings.white_level: piece.white_level,
-                }
+                [
+                    (MonoImgSettings.black_level, piece.white_level),
+                    (MonoImgSettings.white_level, piece.white_level),
+                ]
             )
 
     @pr.reduce
     def set_white_level(piece: MonoImgSettings, payload: float) -> MonoImgSettings:
         if payload >= piece.black_level:
-            return piece.update({MonoImgSettings.white_level: payload})
+            return piece.update([(MonoImgSettings.white_level, payload)])
         else:
             return piece.update(
-                {
-                    MonoImgSettings.white_level: piece.black_level,
-                    MonoImgSettings.black_level: piece.black_level,
-                }
+                [
+                    (MonoImgSettings.white_level, piece.black_level),
+                    (MonoImgSettings.black_level, piece.black_level),
+                ]
             )
 
     @pr.extra_reduce(CameraSettings.roi)
@@ -115,9 +115,9 @@ class MonoImgSettings(pr.Slice):
         piece: MonoImgSettings, state: tuple[int, int, int, int]
     ) -> MonoImgSettings:
         return piece.update(
-            {
-                MonoImgSettings.black_level: piece.black_level / state[2],
-            }
+            [
+                (MonoImgSettings.black_level, piece.black_level / state[2]),
+            ]
         )
 
     @pr.extra_reduce(CameraSettings.exposure_in_s, CameraSettings.binning)
@@ -125,10 +125,10 @@ class MonoImgSettings(pr.Slice):
         piece: MonoImgSettings, exposure: float, binning: tuple[int, int]
     ) -> MonoImgSettings:
         return piece.update(
-            {
-                MonoImgSettings.black_level: piece.black_level * exposure / binning[0],
-                MonoImgSettings.white_level: piece.white_level * exposure / binning[1],
-            }
+            [
+                (MonoImgSettings.black_level, piece.black_level * exposure / binning[0]),
+                (MonoImgSettings.white_level, piece.white_level * exposure / binning[1]),
+            ]
         )
 
 
