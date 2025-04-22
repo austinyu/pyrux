@@ -24,7 +24,10 @@ name = "Austin Yu"
 email = "austinyu@stanford.edu"
 
 [dependency-groups]
-tests = [ "pytest",]
+tests = [
+ "pytest",
+ "pytest-cov>=6.1.1",
+]
 static_checkers = [ "flake8", "mypy", "pyright", "pylint",]
 formatters = [ "ruff", "isort",]
 docs = [ "mkdocs",]

@@ -25,11 +25,13 @@ AnyState = TypeVar("AnyState")
 
 
 @overload
-def reduce(reducer: Callable[[AnySlice, Any], AnySlice]): ...
+def reduce(
+    reducer: Callable[[AnySlice, AnyState], AnySlice],
+) -> Callable[[AnySlice, AnyState], AnySlice]: ...
 
 
 @overload
-def reduce(reducer: Callable[[AnySlice], AnySlice]): ...
+def reduce(reducer: Callable[[AnySlice], AnySlice]) -> Callable[[AnySlice], AnySlice]: ...
 
 
 def reduce(reducer):
