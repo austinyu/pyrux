@@ -6,6 +6,7 @@ __all__ = [
     "extra_reduce",
     "clear_store",
     "create_store",
+    "recreate_store",
     "dump_store",
     "load_store",
     "get_store_pydantic_model",
@@ -21,6 +22,7 @@ __all__ = [
 from .store import (
     clear_store,
     create_store,
+    recreate_store,
     dump_store,
     get_store_pydantic_model,
     force_notify,

@@ -12,6 +12,7 @@ from pyrux.slice import Slice, StatePath
 __all__ = [
     "clear_store",
     "create_store",
+    "recreate_store",
     "dump_store",
     "get_store_pydantic_model",
     "get_store",
@@ -58,7 +59,7 @@ def clear_store() -> None:
     global STORE
     assert STORE is not None, "Store not initialized"
     for (subscriber, slice_name, state_name), extra_reducers in _EXTRA_REDUCER_CACHE.items():
-        if subscriber in STORE:
+        if slice_name in SLICE_TREE and subscriber in SLICE_TREE:
             root_slice_name = SLICE_TREE[slice_name]
             SUBSCRIPTIONS[root_slice_name][state_name] = [
                 reducer
@@ -115,12 +116,17 @@ def create_store(slices: Sequence[Slice]) -> None:
         if subscriber not in SLICE_TREE:
             # the slice that declares an extra reducer is not in the store
             continue
-        if SLICE_TREE[slice_name] not in STORE:
+        if slice_name not in SLICE_TREE:
             # no slice in the store inherit from the slice that declares the extra reducer
             continue
         root_slice_name = SLICE_TREE[slice_name]
         SUBSCRIPTIONS[root_slice_name][state_name].extend(extra_reducers)
         force_notify([StatePath(slice_name, state_name)])
+
+def recreate_store(slices: Sequence[Slice]) -> None:
+    for slice_content in slices:
+        _dispatch(slice_content.slice_name, slice_content)
+
 
 def dump_store() -> dict[str, Any]:
     """Dump the store to a dictionary."""
@@ -133,18 +139,16 @@ def dump_store() -> dict[str, Any]:
 def load_store(data: dict[str, Any]) -> None:
     """Load the store from a dictionary."""
     assert STORE is not None, "Store not initialized"
+    valid_data: dict[str, Slice] = {}
 
-    for slice_name, slice_content in STORE.items():
-        if slice_name in data:
-            slice_content.model_validate(data[slice_name])
+    for slice_name, slice_content in data.items():
+        if slice_name in STORE:
+            valid_data[slice_name] = STORE[slice_name].model_validate(slice_content)
         else:
             raise KeyError(f"Slice '{slice_name}' not found in store")
     
-    for slice_name, slice_content in STORE.items():
-        if slice_name in data:
-            STORE[slice_name] = slice_content.model_validate(data[slice_name])
-        else:
-            raise KeyError(f"Slice '{slice_name}' not found in store")
+    for slice_name, slice_content in data.items():
+        _dispatch(slice_name, valid_data[slice_name])
 
 def get_store_pydantic_model() -> type[BaseModel]:
     """Dump the store to a pydantic model."""
@@ -189,7 +193,10 @@ def get_store_data_model() -> type[_StoreDataModel]:
 def _get_root_slice_name(slice_name: str) -> str:
     """Get the root slice name."""
     if slice_name not in SLICE_TREE:
-        raise KeyError(f"Slice '{slice_name}' not found in store")
+        raise KeyError(
+            f"Slice '{slice_name}' not found in store. "
+            + f"Slices in the store: {list(SLICE_TREE.keys())}"
+        )
     root_slice_name = SLICE_TREE[slice_name]
     if STORE is not None and root_slice_name not in STORE:
         raise KeyError(f"Slice '{root_slice_name}' not found in store")
@@ -226,6 +233,8 @@ else:
     def get_state(path: StatePath) -> Any:
         """Get the state of a specific path."""
         assert STORE is not None, "Store not initialized"
+        if not isinstance(path, StatePath):
+            raise TypeError(f"Expected a StatePath, got {type(path)}")
         root_slice_name = _get_root_slice_name(path.slice_name)
         state_name = path.state
         if root_slice_name not in STORE:
@@ -428,22 +437,14 @@ else:
 
         def register_callback(callback: Callable[..., None]) -> Callable[[], None]:
             callback(*tuple(get_state(arg) for arg in args))
-            for arg in args:
-                root_slice_name = _get_root_slice_name(arg.slice_name)
-                state_name = arg.state
-                SUBSCRIPTIONS[root_slice_name][state_name].append((callback, root_args))
+            for arg in root_args:
+                SUBSCRIPTIONS[arg.slice_name][arg.state].append((callback, root_args))
 
             def unsubscribe() -> None:
-                for arg in args:
-                    root_slice_name = _get_root_slice_name(arg.slice_name)
-                    state_name = arg.state
-                    if (
-                        root_slice_name in SUBSCRIPTIONS
-                        and state_name in SUBSCRIPTIONS[root_slice_name]
-                    ):
-                        SUBSCRIPTIONS[root_slice_name][state_name].remove(
-                            (callback, root_args)
-                        )
+                for arg in root_args:
+                    SUBSCRIPTIONS[arg.slice_name][arg.state].remove(
+                        (callback, root_args)
+                    )
 
             return unsubscribe
 
