@@ -492,52 +492,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyrux"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.dev-dependencies]
-docs = [
-    { name = "mkdocs" },
-]
-formatters = [
-    { name = "isort" },
-    { name = "ruff" },
-]
-static-checkers = [
-    { name = "flake8" },
-    { name = "mypy" },
-    { name = "pylint" },
-    { name = "pyright" },
-]
-tests = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.11.2" }]
-
-[package.metadata.requires-dev]
-docs = [{ name = "mkdocs" }]
-formatters = [
-    { name = "isort" },
-    { name = "ruff" },
-]
-static-checkers = [
-    { name = "flake8" },
-    { name = "mypy" },
-    { name = "pylint" },
-    { name = "pyright" },
-]
-tests = [
-    { name = "pytest" },
-    { name = "pytest-cov", specifier = ">=6.1.1" },
-]
-
-[[package]]
 name = "pytest"
 version = "8.3.5"
 source = { registry = "https://pypi.org/simple" }
@@ -622,6 +576,52 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fb/8e/da1c6c58f751b70f8ceb1eb25bc25d524e8f14fe16edcce3f4e3ba08629c/pyyaml_env_tag-0.1.tar.gz", hash = "sha256:70092675bda14fdec33b31ba77e7543de9ddc88f2e5b99160396572d11525bdb", size = 5631 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/66/bbb1dd374f5c870f59c5bb1db0e18cbe7fa739415a24cbd95b2d1f5ae0c4/pyyaml_env_tag-0.1-py3-none-any.whl", hash = "sha256:af31106dec8a4d68c60207c1886031cbf839b68aa7abccdb19868200532c2069", size = 3911 },
+]
+
+[[package]]
+name = "redux-toolkit"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+docs = [
+    { name = "mkdocs" },
+]
+formatters = [
+    { name = "isort" },
+    { name = "ruff" },
+]
+static-checkers = [
+    { name = "flake8" },
+    { name = "mypy" },
+    { name = "pylint" },
+    { name = "pyright" },
+]
+tests = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.11.2" }]
+
+[package.metadata.requires-dev]
+docs = [{ name = "mkdocs" }]
+formatters = [
+    { name = "isort" },
+    { name = "ruff" },
+]
+static-checkers = [
+    { name = "flake8" },
+    { name = "mypy" },
+    { name = "pylint" },
+    { name = "pyright" },
+]
+tests = [
+    { name = "pytest" },
+    { name = "pytest-cov", specifier = ">=6.1.1" },
 ]
 
 [[package]]

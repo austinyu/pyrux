@@ -9,4 +9,3 @@ This is a Python project scaffolded with scaffoldpy. Here is what you need to do
 6. Register your project on PyPi
 7. Release a new version on github.
 8. Release pipeline will automatically publish the package to PyPi.
-

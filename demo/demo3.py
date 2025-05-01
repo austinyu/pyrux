@@ -1,27 +1,32 @@
-
 from __future__ import annotations
-import pyrux as pr
 
-from pyrux.store import _register_bases, SLICE_TREE
+import redux as rd
+from redux.store import SLICE_TREE, _register_bases
 
 
-class Slice1(pr.Slice):
+class Slice1(rd.Slice):
     state1: int = 0
 
-class Slice2(pr.Slice):
+
+class Slice2(rd.Slice):
     state2: int = 0
+
 
 class Slice3(Slice1):
     state3: int = 0
 
+
 class Slice4(Slice3, Slice2):
     state4: int = 0
 
-class Slice5(pr.Slice):
+
+class Slice5(rd.Slice):
     state5: int = 0
 
-class Slice6(pr.Slice):
+
+class Slice6(rd.Slice):
     state6: int = 0
+
 
 class Slice7(Slice4, Slice5, Slice6):
     state7: int = 0
@@ -30,11 +35,12 @@ class Slice7(Slice4, Slice5, Slice6):
 # print(Slice7.state7)
 
 
-
 # region Slice
 
 from typing import Annotated, NamedTuple
-from annotated_types import Gt, Ge
+
+from annotated_types import Ge, Gt
+
 
 class _Roi(NamedTuple):
     left: Annotated[int, Ge(0)]
@@ -43,25 +49,27 @@ class _Roi(NamedTuple):
     height: Annotated[int, Gt(0)]
 
 
-class BaseCameraSlice(pr.Slice):
+class BaseCameraSlice(rd.Slice):
     # name of the current camera, `camera_obj.device_info.name`
     name: str
     # id of the current camera, `camera_obj.device_info.id`
     camera_id: str
 
-class BitDepthSlice(pr.Slice):
+
+class BitDepthSlice(rd.Slice):
     # bit depth of the captured image (8, 12, 14, 16)
     bit_depth: Annotated[int, Gt(0)]
 
-    @pr.reduce
+    @rd.reduce
     def set_bit_depth(piece: BitDepthSlice, payload: int) -> BitDepthSlice:
         return piece.update([(BitDepthSlice.bit_depth, payload)])
 
-class RoiSlice(pr.Slice):
+
+class RoiSlice(rd.Slice):
     # roi (left, top, width, height)
     roi: _Roi
 
-    @pr.reduce
+    @rd.reduce
     def set_roi(piece: RoiSlice, payload: tuple[int, int, int, int]) -> RoiSlice:
         # let's first check the roi is within the max roi
         left, top, width, height = payload
@@ -78,17 +86,18 @@ class RoiSlice(pr.Slice):
         height = height // height_s * height_s
         return piece.update([(RoiSlice.roi, _Roi(left, top, width, height))])
 
-class ExposureSlice(pr.Slice):
+
+class ExposureSlice(rd.Slice):
     # exposure time in seconds
     exposure_in_s: Annotated[float, Gt(0)]
 
-    @pr.reduce
+    @rd.reduce
     def set_exposure(piece: ExposureSlice, payload: float) -> ExposureSlice:
         return piece.update([(ExposureSlice.exposure_in_s, min(100, max(0, payload)))])
 
+
 class CameraSlice(BaseCameraSlice, BitDepthSlice, RoiSlice, ExposureSlice):
     owner: str
-
 
     @staticmethod
     def get_default_slice() -> CameraSlice:
@@ -102,7 +111,7 @@ class CameraSlice(BaseCameraSlice, BitDepthSlice, RoiSlice, ExposureSlice):
         )
 
 
-class ImgConfigSlice(pr.Slice):
+class ImgConfigSlice(rd.Slice):
     x: float
     y: float
     rotation: float
@@ -118,7 +127,7 @@ class ImgConfigSlice(pr.Slice):
     bit_depth: int
     bg_enabled: bool
 
-    @pr.reduce
+    @rd.reduce
     def set_black_level(piece: ImgConfigSlice, level: float) -> ImgConfigSlice:
         """Reducer to update black level of display an image comm"""
         if piece.white_level == level:
@@ -136,7 +145,7 @@ class ImgConfigSlice(pr.Slice):
             ]
         )
 
-    @pr.reduce
+    @rd.reduce
     def set_white_level(piece: ImgConfigSlice, level: float) -> ImgConfigSlice:
         if piece.black_level == level:
             return piece
@@ -153,7 +162,7 @@ class ImgConfigSlice(pr.Slice):
             ]
         )
 
-    @pr.reduce
+    @rd.reduce
     def set_bit_depth(piece: ImgConfigSlice, bit_depth: int) -> ImgConfigSlice:
         screen_bit_depth = 8
         fitted_white_level = min(
@@ -164,7 +173,7 @@ class ImgConfigSlice(pr.Slice):
             [(ImgConfigSlice.white_level, fitted_white_level)],
         )
 
-    # @pr.extra_reduce(CameraSlice.bit_depth)
+    # @rd.extra_reduce(CameraSlice.bit_depth)
     # def set_bit_depth_extra(piece: ImgConfigSlice, bit_depth: int) -> ImgConfigSlice:
     #     return piece.set_bit_depth(bit_depth)
 
@@ -187,12 +196,25 @@ class ImgConfigSlice(pr.Slice):
             bg_enabled=False,
         )
 
+
+class MyStore(rd.Store):
+    camera: CameraSlice
+
+
+store = MyStore(camera=CameraSlice.get_default_slice())
+rd.create_store(store)
+
+
+@rd.subscribe(CameraSlice.exposure_in_s)
+def on_exposure_change(
+    exp: float,
+) -> None:
+    """Callback function to handle exposure change."""
+
+
 # endregion Slice
 
-default_camera = CameraSlice.get_default_slice()
-default_img_config = ImgConfigSlice.get_default_slice()
-pr.create_store([default_camera, default_img_config])
 
-model = pr.get_store_pydantic_model()
-valid = model.model_validate(pr.dump_store())
+model = rd.get_store(MyStore)
+valid = model.model_validate(rd.get_store())
 print(valid)

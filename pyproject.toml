@@ -1,9 +1,9 @@
 [build-system]
-requires = [ "hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pyrux"
+name = "redux-toolkit"
 description = ""
 readme = "README.md"
 requires-python = ">=3.11"
@@ -11,9 +11,7 @@ license = "MIT"
 license-files = []
 keywords = []
 classifiers = []
-dependencies = [
-    "pydantic>=2.11.2",
-]
+dependencies = ["pydantic>=2.11.2"]
 dynamic = ["version"]
 [[project.authors]]
 name = "Austin Yu"
@@ -24,13 +22,10 @@ name = "Austin Yu"
 email = "austinyu@stanford.edu"
 
 [dependency-groups]
-tests = [
- "pytest",
- "pytest-cov>=6.1.1",
-]
-static_checkers = [ "flake8", "mypy", "pyright", "pylint",]
-formatters = [ "ruff", "isort",]
-docs = [ "mkdocs",]
+tests = ["pytest", "pytest-cov>=6.1.1"]
+static_checkers = ["flake8", "mypy", "pyright", "pylint"]
+formatters = ["ruff", "isort"]
+docs = ["mkdocs"]
 
 [project.urls]
 homepage = "https://todo.com"
@@ -48,8 +43,11 @@ funding = "https://todo.com"
 source = "vcs"
 
 [tool.hatch.build.targets.sdist]
-include = [ "src/pyrux/*", "README.md", "LICENSE", "CHANGELOG.md",]
+include = ["src/redux/*", "README.md", "LICENSE", "CHANGELOG.md"]
 exclude = []
 
 [tool.hatch.build.targets.wheel]
-packages = [ "src/pyrux",]
+packages = ["src/redux"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/redux" = "redux"

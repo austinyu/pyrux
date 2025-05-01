@@ -1,11 +1,22 @@
+"""This module contains tests for redux.py, a Redux-like state management library."""
+
+# Access to a protected member _clear_store
+# pylint: disable=W0212
+# Unused argument fixtures
+# pylint: disable=W0613
+# Redefining name from outer scope (fixtures)
+# pylint: disable=W0621
+# Too many ancestors (8/7) (too-many-ancestors)
+# pylint: disable=R0901
+
 from __future__ import annotations
 
-from typing import Annotated, Generator, NamedTuple, Any
-from annotated_types import Gt, Ge
+from typing import Annotated, Any, NamedTuple
+
 import pytest
+from annotated_types import Ge, Gt
 
-import pyrux as pr
-
+import redux as rd
 
 # region CameraSlice
 
@@ -17,51 +28,56 @@ class _Roi(NamedTuple):
     height: Annotated[int, Gt(0)]
 
 
-class BaseCameraSlice(pr.Slice):
+class _BaseCameraSlice(rd.Slice):
     # name of the current camera, `camera_obj.device_info.name`
     name: str
     # id of the current camera, `camera_obj.device_info.id`
     camera_id: str
 
 
-class BitDepthSlice(pr.Slice):
+class _BitDepthSlice(rd.Slice):
     # bit depth of the captured image (8, 12, 14, 16)
     bit_depth: Annotated[int, Gt(0)]
 
-    @pr.reduce
-    def set_bit_depth(piece: BitDepthSlice, payload: int) -> BitDepthSlice:
+    @rd.reduce
+    def set_bit_depth(piece: _BitDepthSlice, payload: int) -> _BitDepthSlice:
+        """set bit depth of the captured image"""
         ceil_payload = min(64, max(0, payload))
-        return piece.update([(BitDepthSlice.bit_depth, ceil_payload)])
+        return piece.update([(_BitDepthSlice.bit_depth, ceil_payload)])
 
 
-class RoiSlice(pr.Slice):
+class _RoiSlice(rd.Slice):
     # roi (left, top, width, height)
     roi: _Roi
 
 
-class ExposureSlice(pr.Slice):
+class _ExposureSlice(rd.Slice):
     # exposure time in seconds
     exposure_in_s: Annotated[float, Gt(0)]
 
-    @pr.reduce
-    def set_exposure(piece: ExposureSlice, payload: float) -> ExposureSlice:
-        return piece.update([(ExposureSlice.exposure_in_s, min(100, max(0, payload)))])
+    @rd.reduce
+    def set_exposure(piece: _ExposureSlice, payload: float) -> _ExposureSlice:
+        """set exposure time in seconds"""
+        return piece.update([(_ExposureSlice.exposure_in_s, min(100, max(0, payload)))])
 
-    @pr.reduce
-    def increment_exposure(piece: ExposureSlice) -> ExposureSlice:
-        return piece.update([(ExposureSlice.exposure_in_s, piece.exposure_in_s + 1)])
+    @rd.reduce
+    def increment_exposure(piece: _ExposureSlice) -> _ExposureSlice:
+        """increment exposure time in seconds"""
+        return piece.update([(_ExposureSlice.exposure_in_s, piece.exposure_in_s + 1)])
 
-    @pr.reduce
-    def decrement_exposure(piece: ExposureSlice) -> ExposureSlice:
-        return piece.update([(ExposureSlice.exposure_in_s, piece.exposure_in_s - 1)])
+    @rd.reduce
+    def decrement_exposure(piece: _ExposureSlice) -> _ExposureSlice:
+        """decrement exposure time in seconds"""
+        return piece.update([(_ExposureSlice.exposure_in_s, piece.exposure_in_s - 1)])
 
 
-class CameraSlice(BaseCameraSlice, BitDepthSlice, RoiSlice, ExposureSlice):
+class _CameraSlice(_BaseCameraSlice, _BitDepthSlice, _RoiSlice, _ExposureSlice):
     owner: str
 
     @staticmethod
-    def get_default_slice() -> CameraSlice:
-        return CameraSlice(
+    def get_default_slice() -> _CameraSlice:
+        """Get default slice for camera."""
+        return _CameraSlice(
             name="Camera",
             camera_id="camera_1",
             roi=_Roi(left=0, top=0, width=100, height=100),
@@ -75,7 +91,7 @@ class CameraSlice(BaseCameraSlice, BitDepthSlice, RoiSlice, ExposureSlice):
 
 
 # region ImgConfigSlice
-class ImgConfigSlice(pr.Slice):
+class _ImgConfigSlice(rd.Slice):
     x: float
     y: float
     rotation: float
@@ -92,8 +108,8 @@ class ImgConfigSlice(pr.Slice):
     bg_enabled: bool
     roi: _Roi
 
-    @pr.reduce
-    def set_black_level(piece: ImgConfigSlice, level: float) -> ImgConfigSlice:
+    @rd.reduce
+    def set_black_level(piece: _ImgConfigSlice, level: float) -> _ImgConfigSlice:
         """Reducer to update black level of display an image comm"""
         screen_bit_depth = 8
         fitted_black_level = min(level, piece.white_level)
@@ -103,13 +119,14 @@ class ImgConfigSlice(pr.Slice):
         )
         return piece.update(
             [
-                (ImgConfigSlice.black_level, fitted_black_level),
-                (ImgConfigSlice.white_level, fitted_white_level),
+                (_ImgConfigSlice.black_level, fitted_black_level),
+                (_ImgConfigSlice.white_level, fitted_white_level),
             ]
         )
 
-    @pr.reduce
-    def set_white_level(piece: ImgConfigSlice, level: float) -> ImgConfigSlice:
+    @rd.reduce
+    def set_white_level(piece: _ImgConfigSlice, level: float) -> _ImgConfigSlice:
+        """set white level of display an image"""
         screen_bit_depth = 8
         fitted_white_level = max(level, piece.black_level)
         fitted_black_level = max(
@@ -118,13 +135,14 @@ class ImgConfigSlice(pr.Slice):
         )
         return piece.update(
             [
-                (ImgConfigSlice.black_level, fitted_black_level),
-                (ImgConfigSlice.white_level, fitted_white_level),
+                (_ImgConfigSlice.black_level, fitted_black_level),
+                (_ImgConfigSlice.white_level, fitted_white_level),
             ]
         )
 
-    @pr.reduce
-    def set_bit_depth(piece: ImgConfigSlice, bit_depth: int) -> ImgConfigSlice:
+    @rd.reduce
+    def set_bit_depth(piece: _ImgConfigSlice, bit_depth: int) -> _ImgConfigSlice:
+        """set bit depth of display an image"""
         screen_bit_depth = 8
         fitted_white_level = min(
             piece.white_level,
@@ -132,30 +150,34 @@ class ImgConfigSlice(pr.Slice):
         )
         return piece.update(
             [
-                (ImgConfigSlice.white_level, fitted_white_level),
-                (ImgConfigSlice.bit_depth, bit_depth),
+                (_ImgConfigSlice.white_level, fitted_white_level),
+                (_ImgConfigSlice.bit_depth, bit_depth),
             ],
         )
 
-    @pr.reduce
-    def set_roi(piece: ImgConfigSlice, roi: _Roi) -> ImgConfigSlice:
-        return piece.update([(ImgConfigSlice.roi, roi)])
+    @rd.reduce
+    def set_roi(piece: _ImgConfigSlice, roi: _Roi) -> _ImgConfigSlice:
+        """set roi"""
+        return piece.update([(_ImgConfigSlice.roi, roi)])
 
-    @pr.extra_reduce(BitDepthSlice.bit_depth)
-    def react_to_bit_depth(piece: ImgConfigSlice, bit_depth: int) -> ImgConfigSlice:
-        return ImgConfigSlice.set_bit_depth(piece, bit_depth)
+    @rd.extra_reduce(_BitDepthSlice.bit_depth)
+    def react_to_bit_depth(piece: _ImgConfigSlice, bit_depth: int) -> _ImgConfigSlice:
+        """extra reducer to update bit depth"""
+        return _ImgConfigSlice.set_bit_depth(piece, bit_depth)
 
-    @pr.extra_reduce(CameraSlice.exposure_in_s)
-    def react_to_exposure(piece: ImgConfigSlice) -> ImgConfigSlice:
+    @rd.extra_reduce(_CameraSlice.exposure_in_s)
+    def react_to_exposure(piece: _ImgConfigSlice) -> _ImgConfigSlice:
+        """extra reducer to update exposure"""
         return piece.update(
             [
-                (ImgConfigSlice.bg_enabled, not piece.bg_enabled),
+                (_ImgConfigSlice.bg_enabled, not piece.bg_enabled),
             ]
         )
 
     @staticmethod
-    def get_default_slice() -> ImgConfigSlice:
-        return ImgConfigSlice(
+    def get_default_slice() -> _ImgConfigSlice:
+        """Get default slice for image configuration."""
+        return _ImgConfigSlice(
             x=0,
             y=0,
             rotation=0,
@@ -174,14 +196,27 @@ class ImgConfigSlice(pr.Slice):
         )
 
 
-class ImgConfigExtra(ImgConfigSlice):
-    @pr.extra_reduce(CameraSlice.roi)
-    def react_to_roi(piece: ImgConfigExtra, roi: _Roi) -> ImgConfigExtra:
-        return ImgConfigExtra.model_validate(ImgConfigSlice.set_roi(piece, roi))
+class _ImgConfigExtra(_ImgConfigSlice):
+    @rd.extra_reduce(_CameraSlice.roi)
+    def react_to_roi(piece: _ImgConfigExtra, roi: _Roi) -> _ImgConfigExtra:
+        """extra reducer to update roi"""
+        return _ImgConfigExtra.model_validate(_ImgConfigSlice.set_roi(piece, roi))
+
+    @rd.extra_reduce(_CameraSlice.exposure_in_s, _CameraSlice.bit_depth)
+    def react_to_many(
+        piece: _ImgConfigExtra, exposure: float, bit_depth: int
+    ) -> _ImgConfigExtra:
+        """extra reducer to update exposure and bit depth"""
+        return piece.update(
+            [
+                (_ImgConfigSlice.black_level, exposure + bit_depth),
+            ]
+        )
 
     @staticmethod
-    def get_default_slice() -> ImgConfigExtra:
-        return ImgConfigExtra(**ImgConfigSlice.get_default_slice().model_dump())
+    def get_default_slice() -> _ImgConfigExtra:
+        """Get default slice for image configuration."""
+        return _ImgConfigExtra(**_ImgConfigSlice.get_default_slice().model_dump())
 
 
 # endregion ImgConfigSlice
@@ -198,36 +233,37 @@ class ImgConfigExtra(ImgConfigSlice):
 #     └── 2
 
 
-class Slice1(pr.Slice):
+class _Slice1(rd.Slice):
     state1: int = 0
 
 
-class Slice2(pr.Slice):
+class _Slice2(rd.Slice):
     state2: int = 0
 
 
-class Slice3(Slice1):
+class _Slice3(_Slice1):
     state3: int = 0
 
 
-class Slice4(Slice3, Slice2):
+class _Slice4(_Slice3, _Slice2):
     state4: int = 0
 
 
-class Slice5(pr.Slice):
+class _Slice5(rd.Slice):
     state5: int = 0
 
 
-class Slice6(pr.Slice):
+class _Slice6(rd.Slice):
     state6: int = 0
 
 
-class Slice7(Slice4, Slice5, Slice6):
+class _Slice7(_Slice4, _Slice5, _Slice6):
     state7: int = 0
 
     @staticmethod
-    def get_default_slice() -> Slice7:
-        return Slice7(
+    def get_default_slice() -> _Slice7:
+        """Get default slice."""
+        return _Slice7(
             state1=1,
             state2=2,
             state3=3,
@@ -245,306 +281,334 @@ class Slice7(Slice4, Slice5, Slice6):
 
 
 @pytest.fixture()
-def store_with_camera() -> Generator[None, None, None]:
-    default_camera = CameraSlice.get_default_slice()
-    pr.create_store([default_camera])
-    yield
-    pr.clear_store()
+def _store_with_camera() -> None:
+    class _CameraStore(rd.Store):
+        camera: _CameraSlice
+
+    camera_store = _CameraStore(camera=_CameraSlice.get_default_slice())
+    rd.create_store(camera_store, recreate=True)
 
 
 @pytest.fixture()
-def store_with_img() -> Generator[None, None, None]:
-    default_img_config = ImgConfigSlice.get_default_slice()
-    pr.create_store([default_img_config])
-    yield
-    pr.clear_store()
+def _store_with_img() -> None:
+    class _ImgStore(rd.Store):
+        img_config: _ImgConfigSlice
+
+    img_store = _ImgStore(img_config=_ImgConfigSlice.get_default_slice())
+    rd.create_store(img_store, recreate=True)
 
 
 @pytest.fixture()
-def store_with_camera_img() -> Generator[None, None, None]:
-    default_camera = CameraSlice.get_default_slice()
-    default_img_config = ImgConfigSlice.get_default_slice()
-    pr.create_store([default_camera, default_img_config])
-    yield
-    pr.clear_store()
+def _store_with_camera_img() -> None:
+    class _CameraImgStore(rd.Store):
+        camera: _CameraSlice
+        img_config: _ImgConfigSlice
+
+    camera_img_store = _CameraImgStore(
+        camera=_CameraSlice.get_default_slice(), img_config=_ImgConfigSlice.get_default_slice()
+    )
+    rd.create_store(camera_img_store, recreate=True)
 
 
 @pytest.fixture()
-def store_with_camera_img_extra() -> Generator[None, None, None]:
-    default_camera = CameraSlice.get_default_slice()
-    default_img_config = ImgConfigExtra.get_default_slice()
-    pr.create_store([default_camera, default_img_config])
-    yield
-    pr.clear_store()
+def _store_with_camera_img_extra() -> None:
+    class _CameraImgStore(rd.Store):
+        camera: _CameraSlice
+        img_config: _ImgConfigExtra
+
+    camera_img_store = _CameraImgStore(
+        camera=_CameraSlice.get_default_slice(), img_config=_ImgConfigExtra.get_default_slice()
+    )
+    rd.create_store(camera_img_store, recreate=True)
 
 
 @pytest.fixture()
-def store_with_multiple_inheritance() -> Generator[None, None, None]:
-    pr.create_store([Slice7.get_default_slice()])
-    yield
-    pr.clear_store()
+def _store_with_multiple_inheritance() -> None:
+    class _StoreWithMultipleInheritance(rd.Store):
+        """Store with multiple inheritance."""
+
+        slice7: _Slice7
+
+    store = _StoreWithMultipleInheritance(slice7=_Slice7.get_default_slice())
+    rd.create_store(store, recreate=True)
 
 
-def test_create_store_one_slice_init(store_with_camera):
-    default_camera = CameraSlice.get_default_slice()
+def test_create_store_one_slice_init(_store_with_camera) -> None:
+    """Test creating a store with one slice."""
+    default_camera = _CameraSlice.get_default_slice()
 
-    assert pr.get_state(CameraSlice.owner) == default_camera.owner
-    assert pr.get_state(CameraSlice.name) == default_camera.name
-    assert pr.get_state(CameraSlice.camera_id) == default_camera.camera_id
-    assert pr.get_state(CameraSlice.bit_depth) == default_camera.bit_depth
-    assert pr.get_state(CameraSlice.roi) == default_camera.roi
-    assert pr.get_state(CameraSlice.exposure_in_s) == default_camera.exposure_in_s
+    assert rd.get_state(_CameraSlice.owner) == default_camera.owner
+    assert rd.get_state(_CameraSlice.name) == default_camera.name
+    assert rd.get_state(_CameraSlice.camera_id) == default_camera.camera_id
+    assert rd.get_state(_CameraSlice.bit_depth) == default_camera.bit_depth
+    assert rd.get_state(_CameraSlice.roi) == default_camera.roi
+    assert rd.get_state(_CameraSlice.exposure_in_s) == default_camera.exposure_in_s
 
-    assert pr.get_state(BaseCameraSlice.camera_id) == default_camera.camera_id
-    assert pr.get_state(BaseCameraSlice.name) == default_camera.name
-    assert pr.get_state(BitDepthSlice.bit_depth) == default_camera.bit_depth
-    assert pr.get_state(RoiSlice.roi) == default_camera.roi
-    assert pr.get_state(ExposureSlice.exposure_in_s) == default_camera.exposure_in_s
-
-
-def test_extra_reducer_init(store_with_camera_img):
-    default_camera = CameraSlice.get_default_slice()
-    assert pr.get_state(CameraSlice.bit_depth) == default_camera.bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == default_camera.bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == default_camera.bit_depth
+    assert rd.get_state(_BaseCameraSlice.camera_id) == default_camera.camera_id
+    assert rd.get_state(_BaseCameraSlice.name) == default_camera.name
+    assert rd.get_state(_BitDepthSlice.bit_depth) == default_camera.bit_depth
+    assert rd.get_state(_RoiSlice.roi) == default_camera.roi
+    assert rd.get_state(_ExposureSlice.exposure_in_s) == default_camera.exposure_in_s
 
 
-def test_slice_name_attr():
-    assert CameraSlice.slice_name == "CameraSlice"
-    camera_slice = CameraSlice.get_default_slice()
-    assert camera_slice.slice_name == "CameraSlice"
+def test_extra_reducer_init(_store_with_camera_img) -> None:
+    """Test creating a store with extra reducer."""
+    default_camera = _CameraSlice.get_default_slice()
+    assert rd.get_state(_CameraSlice.bit_depth) == default_camera.bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == default_camera.bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == default_camera.bit_depth
+
+
+def test_slice_name_attr() -> None:
+    """Test that the slice name is set correctly."""
+    assert _CameraSlice.slice_name == "_CameraSlice"  # pylint: disable=W0143
+    camera_slice = _CameraSlice.get_default_slice()
+    assert camera_slice.slice_name == "_CameraSlice"
 
 
 @pytest.mark.parametrize(
     "attr_path, state_path, state_value",
     [
-        (Slice7.state1, Slice7.state1, Slice7.get_default_slice().state1),
-        (Slice7.state2, Slice7.state2, Slice7.get_default_slice().state2),
-        (Slice7.state3, Slice7.state3, Slice7.get_default_slice().state3),
-        (Slice7.state4, Slice7.state4, Slice7.get_default_slice().state4),
-        (Slice7.state5, Slice7.state5, Slice7.get_default_slice().state5),
-        (Slice7.state6, Slice7.state6, Slice7.get_default_slice().state6),
-        (Slice7.state7, Slice7.state7, Slice7.get_default_slice().state7),
-        (Slice6.state6, Slice6.state6, Slice7.get_default_slice().state6),
-        (Slice5.state5, Slice5.state5, Slice7.get_default_slice().state5),
-        (Slice4.state4, Slice4.state4, Slice7.get_default_slice().state4),
-        (Slice3.state3, Slice3.state3, Slice7.get_default_slice().state3),
-        (Slice2.state2, Slice2.state2, Slice7.get_default_slice().state2),
-        (Slice1.state1, Slice1.state1, Slice7.get_default_slice().state1),
-        (Slice4.state3, Slice4.state3, Slice7.get_default_slice().state3),
-        (Slice4.state2, Slice4.state2, Slice7.get_default_slice().state2),
-        (Slice4.state1, Slice4.state1, Slice7.get_default_slice().state1),
-        (Slice3.state1, Slice3.state1, Slice7.get_default_slice().state1),
+        (_Slice7.state1, _Slice7.state1, _Slice7.get_default_slice().state1),
+        (_Slice7.state2, _Slice7.state2, _Slice7.get_default_slice().state2),
+        (_Slice7.state3, _Slice7.state3, _Slice7.get_default_slice().state3),
+        (_Slice7.state4, _Slice7.state4, _Slice7.get_default_slice().state4),
+        (_Slice7.state5, _Slice7.state5, _Slice7.get_default_slice().state5),
+        (_Slice7.state6, _Slice7.state6, _Slice7.get_default_slice().state6),
+        (_Slice7.state7, _Slice7.state7, _Slice7.get_default_slice().state7),
+        (_Slice6.state6, _Slice6.state6, _Slice7.get_default_slice().state6),
+        (_Slice5.state5, _Slice5.state5, _Slice7.get_default_slice().state5),
+        (_Slice4.state4, _Slice4.state4, _Slice7.get_default_slice().state4),
+        (_Slice3.state3, _Slice3.state3, _Slice7.get_default_slice().state3),
+        (_Slice2.state2, _Slice2.state2, _Slice7.get_default_slice().state2),
+        (_Slice1.state1, _Slice1.state1, _Slice7.get_default_slice().state1),
+        (_Slice4.state3, _Slice4.state3, _Slice7.get_default_slice().state3),
+        (_Slice4.state2, _Slice4.state2, _Slice7.get_default_slice().state2),
+        (_Slice4.state1, _Slice4.state1, _Slice7.get_default_slice().state1),
+        (_Slice3.state1, _Slice3.state1, _Slice7.get_default_slice().state1),
     ],
 )
-def test_store_with_multiple_inheritance(
-    store_with_multiple_inheritance,
+def test__store_with_multiple_inheritance(
+    _store_with_multiple_inheritance,
     attr_path: Any,
-    state_path: pr.slice.StatePath,
+    state_path: rd.slice.StatePath,
     state_value: Any,
-):
-    assert pr.get_state(attr_path) == state_value
-    assert pr.get_state(state_path) == state_value
+) -> None:
+    """Test that the store with multiple inheritance is created correctly."""
+    assert rd.get_state(attr_path) == state_value
+    assert rd.get_state(state_path) == state_value
 
 
-def test_one_directional_extra_reduce(store_with_camera_img):
-    bit_depth = CameraSlice.get_default_slice().bit_depth
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+def test_one_directional_extra_reduce(_store_with_camera_img) -> None:
+    """Test that the extra reducer only updates the state in one direction."""
+    bit_depth = _CameraSlice.get_default_slice().bit_depth
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
     new_bit_depth = bit_depth * 2
-    pr.dispatch_state(ImgConfigSlice.bit_depth, new_bit_depth)
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == new_bit_depth
+    rd.dispatch_state(_ImgConfigSlice.bit_depth, new_bit_depth)
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == new_bit_depth
 
 
 @pytest.mark.parametrize(
     "state_path",
-    [CameraSlice.bit_depth, BitDepthSlice.bit_depth],
+    [_CameraSlice.bit_depth, _BitDepthSlice.bit_depth],
 )
-def test_dispatch_bit_depth_state(store_with_camera_img, state_path: pr.slice.StatePath):
-    bit_depth = CameraSlice.get_default_slice().bit_depth
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+def test_dispatch_bit_depth_state(
+    _store_with_camera_img, state_path: rd.slice.StatePath
+) -> None:
+    """Test that the dispatch of bit depth state works correctly."""
+    bit_depth = _CameraSlice.get_default_slice().bit_depth
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
     bit_depth *= 2
-    pr.dispatch_state(state_path, bit_depth)
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+    rd.dispatch_state(state_path, bit_depth)
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
 
-def test_dispatch_set_bit_depth(store_with_camera_img):
-    bit_depth = CameraSlice.get_default_slice().bit_depth
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+def test_dispatch_set_bit_depth(_store_with_camera_img) -> None:
+    """Test that the dispatch of set bit depth works correctly."""
+    bit_depth = _CameraSlice.get_default_slice().bit_depth
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
     bit_depth *= 2
-    pr.dispatch(BitDepthSlice.set_bit_depth, bit_depth)
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+    rd.dispatch(_BitDepthSlice.set_bit_depth, bit_depth)
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
-    bit_depth /= 2
-    pr.dispatch(CameraSlice.set_bit_depth, int(bit_depth))
-    assert pr.get_state(CameraSlice.bit_depth) == bit_depth
-    assert pr.get_state(BitDepthSlice.bit_depth) == bit_depth
-    assert pr.get_state(ImgConfigSlice.bit_depth) == bit_depth
+    bit_depth //= 2
+    rd.dispatch(_CameraSlice.set_bit_depth, int(bit_depth))
+    assert rd.get_state(_CameraSlice.bit_depth) == bit_depth
+    assert rd.get_state(_BitDepthSlice.bit_depth) == bit_depth
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == bit_depth
 
     bit_depth = 100
-    pr.dispatch(CameraSlice.set_bit_depth, bit_depth)
-    assert pr.get_state(CameraSlice.bit_depth) == 64
-    assert pr.get_state(BitDepthSlice.bit_depth) == 64
-    assert pr.get_state(ImgConfigSlice.bit_depth) == 64
+    rd.dispatch(_CameraSlice.set_bit_depth, bit_depth)
+    assert rd.get_state(_CameraSlice.bit_depth) == 64
+    assert rd.get_state(_BitDepthSlice.bit_depth) == 64
+    assert rd.get_state(_ImgConfigSlice.bit_depth) == 64
 
 
-def test_incremental_reducers(store_with_camera_img):
-    default_camera = CameraSlice.get_default_slice()
-    assert pr.get_state(CameraSlice.exposure_in_s) == default_camera.exposure_in_s
+def test_incremental_reducers(_store_with_camera_img) -> None:
+    """Test that the incremental reducers work correctly."""
+    default_camera = _CameraSlice.get_default_slice()
+    assert rd.get_state(_CameraSlice.exposure_in_s) == default_camera.exposure_in_s
 
-    pr.dispatch(ExposureSlice.increment_exposure)
-    assert pr.get_state(CameraSlice.exposure_in_s) == default_camera.exposure_in_s + 1
+    rd.dispatch(_ExposureSlice.increment_exposure)
+    assert rd.get_state(_CameraSlice.exposure_in_s) == default_camera.exposure_in_s + 1
 
-    pr.dispatch(CameraSlice.decrement_exposure)
-    assert pr.get_state(CameraSlice.exposure_in_s) == default_camera.exposure_in_s + 1 - 1
-
-
-def test_extra_reducer_no_args(store_with_camera_img):
-    default_camera = CameraSlice.get_default_slice()
-    default_img = ImgConfigSlice.get_default_slice()
-    assert pr.get_state(CameraSlice.exposure_in_s) == default_camera.exposure_in_s
-
-    pr.dispatch(ExposureSlice.set_exposure, 1.0)
-    assert pr.get_state(ImgConfigSlice.bg_enabled) == default_img.bg_enabled
+    rd.dispatch(_CameraSlice.decrement_exposure)
+    assert rd.get_state(_CameraSlice.exposure_in_s) == default_camera.exposure_in_s + 1 - 1
 
 
-def test_subscribe(store_with_camera_img):
+def test_extra_reducer_no_args(_store_with_camera_img) -> None:
+    """Test that the extra reducer works correctly."""
+    default_camera = _CameraSlice.get_default_slice()
+    default_img = _ImgConfigSlice.get_default_slice()
+    assert rd.get_state(_CameraSlice.exposure_in_s) == default_camera.exposure_in_s
+
+    rd.dispatch(_ExposureSlice.set_exposure, 1.0)
+    not_default_bg: bool = not default_img.bg_enabled
+    assert rd.get_state(_ImgConfigSlice.bg_enabled) == not_default_bg
+
+
+def test_subscribe(_store_with_camera_img) -> None:
+    """Test that the subscribe function works correctly."""
     bit_depths: list[int] = []
-    init_bit_depth = CameraSlice.get_default_slice().bit_depth
+    init_bit_depth = _CameraSlice.get_default_slice().bit_depth
 
     def img_bit_depth(val: int) -> None:
         bit_depths.append(val)
 
-    unsubscribe = pr.subscribe(ImgConfigSlice.bit_depth)(img_bit_depth)
+    unsubscribe = rd.subscribe(_ImgConfigSlice.bit_depth)(img_bit_depth)
 
     assert bit_depths == [init_bit_depth]
-    pr.dispatch(ImgConfigSlice.set_bit_depth, 10)
+    rd.dispatch(_ImgConfigSlice.set_bit_depth, 10)
     assert bit_depths == [init_bit_depth, 10]
-    pr.dispatch_state(ImgConfigSlice.bit_depth, 20)
+    rd.dispatch_state(_ImgConfigSlice.bit_depth, 20)
     assert bit_depths == [init_bit_depth, 10, 20]
 
-    pr.dispatch(CameraSlice.set_bit_depth, 30)
+    rd.dispatch(_CameraSlice.set_bit_depth, 30)
     assert bit_depths == [init_bit_depth, 10, 20, 30]
-    pr.dispatch_state(CameraSlice.bit_depth, 40)
+    rd.dispatch_state(_CameraSlice.bit_depth, 40)
     assert bit_depths == [init_bit_depth, 10, 20, 30, 40]
-    pr.dispatch(BitDepthSlice.set_bit_depth, 50)
+    rd.dispatch(_BitDepthSlice.set_bit_depth, 50)
     assert bit_depths == [init_bit_depth, 10, 20, 30, 40, 50]
-    pr.dispatch_state(BitDepthSlice.bit_depth, 60)
+    rd.dispatch_state(_BitDepthSlice.bit_depth, 60)
     assert bit_depths == [init_bit_depth, 10, 20, 30, 40, 50, 60]
 
     unsubscribe()
 
-    pr.dispatch(ImgConfigSlice.set_bit_depth, 70)
+    rd.dispatch(_ImgConfigSlice.set_bit_depth, 70)
     assert bit_depths == [init_bit_depth, 10, 20, 30, 40, 50, 60]
 
 
-def test_update_no_change_value(store_with_camera_img):
+def test_update_no_change_value(_store_with_camera_img) -> None:
+    """Test that the update function does not trigger a change when the value is the same."""
     bit_depths: list[int] = []
-    init_bit_depth = CameraSlice.get_default_slice().bit_depth
+    init_bit_depth = _CameraSlice.get_default_slice().bit_depth
 
-    @pr.subscribe(ImgConfigSlice.bit_depth)
+    @rd.subscribe(_ImgConfigSlice.bit_depth)
     def img_bit_depth(val: int) -> None:
         bit_depths.append(val)
 
     assert bit_depths == [init_bit_depth]
 
-    pr.dispatch(ImgConfigSlice.set_bit_depth, init_bit_depth)
+    rd.dispatch(_ImgConfigSlice.set_bit_depth, init_bit_depth)
     assert bit_depths == [init_bit_depth]
 
-    pr.dispatch_state(ImgConfigSlice.bit_depth, init_bit_depth * 2)
+    rd.dispatch_state(_ImgConfigSlice.bit_depth, init_bit_depth * 2)
     assert bit_depths == [init_bit_depth, init_bit_depth * 2]
-    pr.dispatch_state(ImgConfigSlice.bit_depth, init_bit_depth * 2)
+    rd.dispatch_state(_ImgConfigSlice.bit_depth, init_bit_depth * 2)
     assert bit_depths == [init_bit_depth, init_bit_depth * 2]
 
 
-def test_interdependent_update(store_with_camera_img):
-    pr.dispatch_state(CameraSlice.bit_depth, 8)
-    pr.dispatch_state(ImgConfigSlice.black_level, 0)
-    pr.dispatch_state(ImgConfigSlice.white_level, 1)
+def test_interdependent_update(_store_with_camera_img) -> None:
+    """Test that the interdependent update works correctly."""
+    rd.dispatch_state(_CameraSlice.bit_depth, 8)
+    rd.dispatch_state(_ImgConfigSlice.black_level, 0)
+    rd.dispatch_state(_ImgConfigSlice.white_level, 1)
 
-    assert pr.get_state(ImgConfigSlice.black_level) == 0
-    assert pr.get_state(ImgConfigSlice.white_level) == 1
+    assert rd.get_state(_ImgConfigSlice.black_level) == 0
+    assert rd.get_state(_ImgConfigSlice.white_level) == 1
 
-    pr.dispatch(ImgConfigSlice.set_black_level, 0.5)
-    assert pr.get_state(ImgConfigSlice.black_level) == 0.5
-    assert pr.get_state(ImgConfigSlice.white_level) == 1.0
+    rd.dispatch(_ImgConfigSlice.set_black_level, 0.5)
+    assert rd.get_state(_ImgConfigSlice.black_level) == 0.5
+    assert rd.get_state(_ImgConfigSlice.white_level) == 1.0
 
-    pr.dispatch(ImgConfigSlice.set_white_level, 0.3)
-    assert pr.get_state(ImgConfigSlice.black_level) == 0.5
-    assert pr.get_state(ImgConfigSlice.white_level) == 0.5
+    rd.dispatch(_ImgConfigSlice.set_white_level, 0.3)
+    assert rd.get_state(_ImgConfigSlice.black_level) == 0.5
+    assert rd.get_state(_ImgConfigSlice.white_level) == 0.5
 
 
-def test_extra_reduce_subscribe_parent(store_with_camera_img_extra):
+def test_extra_reduce_subscribe_parent(_store_with_camera_img_extra) -> None:
+    """Test that the extra reducer works correctly when subscribing to a parent slice."""
     roi_log: list[_Roi] = []
-    init_roi = CameraSlice.get_default_slice().roi
+    init_roi = _CameraSlice.get_default_slice().roi
 
     def img_roi(val: _Roi) -> None:
         roi_log.append(val)
 
-    unsubscribe = pr.subscribe(ImgConfigSlice.roi)(img_roi)
+    unsubscribe = rd.subscribe(_ImgConfigSlice.roi)(img_roi)
 
     assert roi_log == [init_roi]
-    pr.dispatch_state(CameraSlice.roi, _Roi(0, 0, 200, 200))
+    rd.dispatch_state(_CameraSlice.roi, _Roi(0, 0, 200, 200))
     assert roi_log == [init_roi, _Roi(0, 0, 200, 200)]
-    pr.dispatch_state(ImgConfigSlice.roi, _Roi(0, 0, 300, 300))
+    rd.dispatch_state(_ImgConfigSlice.roi, _Roi(0, 0, 300, 300))
     assert roi_log == [init_roi, _Roi(0, 0, 200, 200), _Roi(0, 0, 300, 300)]
 
     unsubscribe()
-    pr.dispatch_state(CameraSlice.roi, _Roi(0, 0, 400, 400))
+    rd.dispatch_state(_CameraSlice.roi, _Roi(0, 0, 400, 400))
     assert roi_log == [init_roi, _Roi(0, 0, 200, 200), _Roi(0, 0, 300, 300)]
 
-def test_multiple_unsubscribe(store_with_img):
+    rd.dispatch_state(_CameraSlice.exposure_in_s, 1.0)
+    rd.dispatch_state(_CameraSlice.bit_depth, 8)
+    assert rd.get_state(_ImgConfigSlice.black_level) == 9
+
+
+def test_multiple_unsubscribe(_store_with_img) -> None:
+    """Test that multiple unsubscribe works correctly."""
     unsubscribes: list = []
 
     for attr in ["x", "y", "rotation"]:
         unsubscribes.append(
-            pr.subscribe(pr.build_path("ImgConfigSlice", attr))(lambda val: None)
+            rd.subscribe(rd.build_path("_ImgConfigSlice", attr))(lambda val: None)
         )
-    
+
     for unsubscribe in unsubscribes:
         unsubscribe()
 
-def test_dump_store(store_with_camera):
-    store = pr.dump_store()
-    assert len(store) == 1
-    assert store["CameraSlice"] == CameraSlice.get_default_slice().model_dump()
 
-
-def test_get_store(store_with_camera):
-    store = pr.get_store()
-    assert len(store) == 1
-    assert store["CameraSlice"].model_dump() == CameraSlice.get_default_slice().model_dump()
-
-
-def test_invalid_extra_reduce():
+def test_invalid_extra_reduce() -> None:
+    """Test that extra_reduce raises an error when the state is not found."""
     with pytest.raises(ValueError):
 
-        @pr.extra_reduce()  # type: ignore
+        @rd.extra_reduce()  # type: ignore
         def invalid_extra_reducer() -> None: ...
 
 
-def test_invalid_create_store():
+def test_invalid_create_store() -> None:
+    """Test creating a store with an invalid store."""
+    rd.store._clear_store()
     with pytest.raises(TypeError):
-        pr.create_store([CameraSlice, CameraSlice])  # type: ignore
+        rd.create_store(_CameraSlice)  # type: ignore
 
 
-def test_invalid_get_state():
-    with pytest.raises(KeyError):
-        pr.get_state(pr.build_path("CameraSlice", "wrong_state"))
+def test_invalid_get_state() -> None:
+    """Test that get_state raises an error when the state is not found."""
+    rd.store._clear_store()
+    with pytest.raises(RuntimeError):
+        rd.get_state(rd.build_path("_CameraSlice", "wrong_state"))
 
-    with pytest.raises(KeyError):
-        pr.get_state(pr.build_path("WrongSlice", "wrong_state"))
+    with pytest.raises(RuntimeError):
+        rd.get_state(rd.build_path("WrongSlice", "wrong_state"))

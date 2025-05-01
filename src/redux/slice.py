@@ -1,17 +1,20 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING, Any, NamedTuple, Sequence, dataclass_transform, Self, TypeVar
-from pydantic import BaseModel, ConfigDict
-import warnings
+"""Redux-like slice module for managing state in a store."""
 
-# Suppress specific warnings from Pydantic
-warnings.filterwarnings(
-    "ignore",
-    message=r".*shadows an attribute in parent.*",
-    category=UserWarning,
-    module=r"pydantic\._internal\._fields",
+from __future__ import annotations
+
+from typing import (
+    Any,
+    NamedTuple,
+    Self,
+    Sequence,
+    TypeVar,
+    dataclass_transform,
+    overload,
 )
 
-T_State = TypeVar("T_State")
+from pydantic import BaseModel, ConfigDict
+
+AnyState = TypeVar("AnyState")
 
 
 class StatePath(NamedTuple):
@@ -60,7 +63,7 @@ class Slice(BaseModel):
             if attr_name == "slice_name":
                 return cls.__name__
             if attr_name.startswith("_"):
-                return super(type(cls), cls).__getattribute__(attr_name)
+                return super(type(cls), cls).__getattribute__(attr_name)  # pylint: disable=E1003
 
             if (
                 (cls.__module__, cls.__name__) in _SLICE_REDUX_ANNOTATIONS  # is a slice
@@ -71,7 +74,7 @@ class Slice(BaseModel):
                     slice_name=cls.__name__,
                     state=attr_name,
                 )
-            return super(type(cls), cls).__getattribute__(attr_name)
+            return super(type(cls), cls).__getattribute__(attr_name)  # pylint: disable=E1003
 
         cls.__class__.__getattribute__ = get_attr_as_internal
 
@@ -84,19 +87,16 @@ class Slice(BaseModel):
         """Get the state of a specific key."""
         if key not in self.model_fields_set:
             raise KeyError(f"State '{key}' not found in slice '{self.__class__.__name__}'")
-        return self.__getattribute__(key)
+        return getattr(self, key)
 
-    if TYPE_CHECKING:
+    @overload
+    def update(self, update_states: Sequence[tuple[StatePath, Any]]) -> Self: ...
 
-        def update(self, update_states: Sequence[tuple[T_State, T_State]]) -> Self:
-            """Update the slice state with new values by creating a new instance."""
-            ...
+    @overload
+    def update(self, update_states: Sequence[tuple[AnyState, AnyState]]) -> Self: ...
 
-    else:
-
-        def update(self, update_states: Sequence[tuple[StatePath, Any]]) -> Self:
-            return self.model_copy(
-                update={
-                    update_path.state: new_state for update_path, new_state in update_states
-                }
-            )
+    def update(self, update_states):
+        """Update the slice state with new values by creating a new instance."""
+        return self.model_copy(
+            update={update_path.state: new_state for update_path, new_state in update_states}
+        )
