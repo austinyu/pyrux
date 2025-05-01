@@ -25,7 +25,12 @@ email = "austinyu@stanford.edu"
 tests = ["pytest", "pytest-cov>=6.1.1"]
 static_checkers = ["flake8", "mypy", "pyright", "pylint"]
 formatters = ["ruff", "isort"]
-docs = ["mkdocs"]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings-python",
+    "pymdown-extensions",
+]
 
 [project.urls]
 homepage = "https://todo.com"

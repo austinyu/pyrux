@@ -108,8 +108,8 @@ def create_store(store: Store, recreate: bool = False) -> None:
     """Create a store with the given slices.
 
     Args:
-        - store: The store to create. Must be a subclass of `Store`.
-        - recreate: If True, recreate the store even if it already exists.
+        store: The store to create. Must be a subclass of `Store`.
+        recreate: If True, recreate the store even if it already exists.
             This will clear the existing store and create a new one.
     """
     global STORE_CLS, STORE, SLICE_NAME_CACHE  # pylint: disable=W0603
